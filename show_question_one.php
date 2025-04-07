@@ -1,5 +1,28 @@
 <?php
 include 'connection.php';
+session_start();
+
+$user_id = $_GET['id'] ?? null; 
+
+if ($user_id) {
+    $sql = "SELECT * FROM user_quize WHERE id = $user_id";
+    $result = $conn->query($sql);
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $fname = $row['fname'];
+        $lname = $row['lname'];
+        $gender = $row['gender'];       
+        $dob =$row['dob'];        
+        $class =$row['class'];
+        $branch =$row['branch'];
+        $board =$row['board'];
+        echo "<h1 style='font-family: Raleway; font-size: 30px;' >Welcome " . $row['fname'] . " " . $row['lname'] . "</h1>";
+    } else {
+        echo "<h1>User not found</h1>";
+    }
+} else {
+    header("Location: user.php");
+}
 
 
 $sql = "SELECT * FROM quize";
@@ -68,9 +91,11 @@ button:hover {
 </style>
 </head>
 <body>
-  <a href="enter_question.php">admin</a>
+  <a href="enter_question.php">admin</a><br>
+  <a href="user.php">User</a>
 
-<form id="regForm" action="<?php echo $_SERVER['PHP_SELF']; ?>" method="post">
+  <form id="regForm" action="<?php echo $_SERVER['PHP_SELF'] . '?id=' . $_GET['id']; ?>" method="post">
+
   <h1>PHP Quiz</h1>  
   <!-- Loop through questions and create tabs -->
   <?php 
@@ -115,6 +140,28 @@ button:hover {
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {  
   // Compare submitted answers with correct answers
+  $user_id = $_GET['id'] ?? $_SESSION['user_id'] ?? null;
+
+  if (!$user_id) {
+    echo "Error: User ID not found";
+    exit();
+}
+
+ // Fetch user data from database
+ $sql = "SELECT * FROM user_quize WHERE id = $user_id";
+ $result = $conn->query($sql);
+ if ($result->num_rows > 0) {
+     $user_data = $result->fetch_assoc();
+     $fname = $user_data['fname'];
+     $lname = $user_data['lname'];
+     $gender = $user_data['gender'];
+     $dob = $user_data['dob'];
+     $class = $user_data['class'];
+     $branch = $user_data['branch'];
+     $board = $user_data['board'];
+ }
+
+
   $correct = 0;
   $wrong = 0;
   $total_marks = 0; 
@@ -155,29 +202,81 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
       $correct++; 
       $total_marks += intval($current_question['mark']); 
       
-      echo "<br> Question : " . $current_question['question'] . "<br>"; 
-      echo "<p style='color:green;'>Your answer: " . $user_answer . " (+". $current_question['mark'] ." marks)<br></p>";
-      echo "Correct answer: " . $_POST['correct_answer'][$id] . "<br>";  
+      // echo "<br> Question : " . $current_question['question'] . "<br>"; 
+      // echo "<p style='color:green;'>Your answer: " . $user_answer . " (+". $current_question['mark'] ." marks)<br></p>";
+      // echo "Correct answer: " . $_POST['correct_answer'][$id] . "<br>";  
 
     } else {
       $wrong++;      
       $wrong_marks += intval($current_question['mark']); // Track marks lost
 
-      echo "<br> Question : " . $current_question['question'] . "<br>"; 
-      echo "<p style='color:red;'>Your answer: " . $user_answer . " (-". $current_question['mark'] ." marks)<br></p>";
-      echo "Correct answer: " . $_POST['correct_answer'][$id] . "<br>";  
-      echo "<br>"; 
+      // echo "<br> Question : " . $current_question['question'] . "<br>"; 
+      // echo "<p style='color:red;'>Your answer: " . $user_answer . " (-". $current_question['mark'] ." marks)<br></p>";
+      // echo "Correct answer: " . $_POST['correct_answer'][$id] . "<br>";  
+      // echo "<br>"; 
     }
+  }  
+  ?>
+<!-- certificate for result using $user_id data  -->
+ <div class="certificate">
+  <h1 style="text-align: center; font-size: 30px; background-color: #f2f2f2; padding: 20px; font-family: 'Times New Roman', serif;">Certificate of Quize Completion</h1>
+  <p style="text-align: center; font-size: 25px; font-family: 'Times New Roman', serif;">This is to certify that</p>
+  <h2 style="text-align: left; font-size: 40px;"><?php echo $fname . " " . $lname; ?></h2>
+  <p style="text-align: left; font-size: 20px;"> OF Class <?php echo $class; ?>, <?php echo $branch; ?>, <?php echo $board; ?> Board</p>
+  <p style="text-align: left; font-size: 20px;">Date of Birth: <?php echo $dob; ?></p>
+  <p style="text-align: center; font-size: 25px; font-family: 'Times New Roman', serif;">Has successfully completed the PHP Quiz.</p>
+  <p style="text-align: center; font-size: 20px;">Date of Completion: <?php echo date("Y-m-d"); ?></p><hr>
+  <p style="text-align: center; font-size: 20px; font-weight: bold;">Results</p>
+  <p style="text-align: center; font-size: 20px; color: green;">Total Correct Answers: <?php echo $correct; ?></p>
+  <p style="text-align: center; font-size: 20px; color: red;">Total Wrong Answers: <?php echo $wrong; ?></p>
+  <p style="text-align: center; font-size: 20px; color:green ;">Total Marks: <?php echo $total_marks; ?></p>
+  <p style="text-align: center; font-size: 20px; color: red;">Marks Lost: <?php echo $wrong_marks; ?></p>
+  <p style="text-align: center; font-size: 20px;">Total Possible Marks: <?php echo $total_possible_marks; ?></p>
+  <p style="text-align: center; font-size: 20px; font-weight: bold;  ">Percentage Score: <?php echo round(($total_marks / $total_possible_marks * 100), 2) . "%"; ?></p> <br>
+  <?php
+  if(round(($total_marks / $total_possible_marks * 100), 2)>=50) {    
+    echo "<p style='text-align: center; font-size: 20px; color: green;'>Congratulations! You have passed the quiz.</p>";
+  } else {
+    echo "<p style='text-align: center; font-size: 20px; color: red;'>Unfortunately, you did not pass the quiz. Better luck next time!</p>";
   }
-  
-  echo "<hr>";
-  echo "<h3>Quiz Results:</h3>";
-  echo "Correct answers: $correct (+" . $total_marks . " marks)<br>";
-  echo "Wrong answers: $wrong (-" . $wrong_marks . " marks)<br>";
-  echo "Total questions: " . count($_POST['correct_answer']) . "<br>";
-  echo "Total possible marks: " . $total_possible_marks . "<br>";
-  echo "Your total marks: " . $total_marks . " out of " . $total_possible_marks . "<br>";
-  echo "Percentage Score: " . round(($total_marks / $total_possible_marks * 100), 2) . "%";
+  ?>
+  <p style="text-align: center; font-size: 20px; font-weight: bold;">This certificate is awarded for successfully completing the quiz.</p>
+  <p style="text-align: center; font-size: 20px;">Thank you for participating!</p> 
+ <div class="fotter">
+  <p style="text-align: left; font-size: 20px;">Date: <?php echo date("d-m-y"); ?></p>
+  <div class="signature" style="text-align: right;">
+  <img src="sig.png" alt="Signature" style=" height:150px; width:250px; margin-top:20px;"> 
+  <p style="text-align: right; font-size: 25px; font-family: 'Times New Roman', serif; ">Authorized Signature</p>
+</div>
+</div>
+</div>
+
+
+  <style>
+    .fotter {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 20px;
+    }
+    .certificate {
+      border: 5px solid #4CAF50;
+      padding: 20px;
+      width: 80%;
+      margin: 0 auto;
+      background-color: #f9f9f9;
+      text-align: center;
+      font-family: Arial, sans-serif;
+    }
+    .certificate h1 {
+      font-size: 40px;
+      color: #4CAF50;
+    }
+    .certificate p {
+      font-size: 20px;
+    }
+  </style>
+<?php 
 }
 ?>
 
@@ -272,5 +371,3 @@ function nextPrev(n) {
 </script>
 </body>
 </html>
-
-
